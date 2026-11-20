@@ -146,9 +146,9 @@
       <div class="note">"附近范围"只用于不设目的地时：在这个距离内找加油站。</div>
       <div class="gap"></div>
       <label class="t">车辆地址（Tailscale，选填）</label>
-      <div class="row"><input type="text" id="carUrl" placeholder="https://车机名.xxxx.ts.net" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="row"><input type="text" id="carUrl" placeholder="http://100.65.114.20:8473" autocapitalize="off" autocorrect="off" spellcheck="false">
         <button class="btn" id="carBtn">读取</button></div>
-      <div class="note">填了之后，打开网页时会自动读取车上的剩余油量和油耗（手机需要开着 Tailscale，车机需要通电联网）。</div>
+      <div class="note">填车机的 Tailscale 地址，点"读取"：页面会跳到车机，读完油量和油耗再跳回来（手机需要开着 Tailscale，车机需要通电联网）。</div>
     </details>
   </div>
 
@@ -401,27 +401,60 @@ if (typeof module !== 'undefined') module.exports = CORE;
     if (u && !/^https?:\/\//.test(u)) u = 'https://' + u;
     return u;
   }
+  /** A reading on the page: litres, l/100km, when the car had it, the car's clock then (ms). */
+  function applyCar(d, how) {
+    const info = $('carInfo');
+    if (d.litres == null) { info.innerHTML = '🚗 车机连上了，但还没收到油量（车刚启动时等几秒再点"读取"）'; return; }
+    const o = readOpts();
+    $('fuelPct').value = Math.max(0, Math.min(100, Math.round(d.litres / o.tank * 100)));
+    if (d.l100km > 0) $('cons').value = d.l100km;
+    const ago = d.at && d.now ? Math.max(0, Math.round((d.now - d.at) / 60000)) : null;
+    info.innerHTML = '🚗 来自车辆：剩 <b>' + d.litres + ' 升</b>' + (d.l100km > 0 ? ' · 油耗 <b>' + d.l100km + '</b> L/100km' : '') +
+      (ago != null ? ' · ' + (ago < 1 ? '刚刚' : ago + ' 分钟前') : '') + (how ? ' · ' + how : '');
+    paintFuel(); save(); if (st.last) render();
+  }
   async function readCar(quiet) {
     const base = carBase(), info = $('carInfo');
     if (!base) { info.textContent = ''; return; }
+    if (/^http:\/\//.test(base)) {
+      // plain http (no "tailscale serve"): an https page can't fetch it, so go there and come back with the reading
+      if (quiet) return;
+      info.textContent = '🚗 正在跳到车机读取…';
+      location.href = base + '/go?to=' + encodeURIComponent(location.href.split('#')[0]);
+      return;
+    }
     if (!quiet) info.textContent = '🚗 正在读取车辆数据…';
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = setTimeout(() => ctl && ctl.abort(), 5000);
     try {
       const r = await fetch(base + '/fuel', { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      const d = await r.json();
-      if (d.litres == null) { info.innerHTML = '🚗 车机连上了，但还没收到油量（车刚启动时等几秒再点"读取"）'; return; }
-      const o = readOpts();
-      $('fuelPct').value = Math.max(0, Math.min(100, Math.round(d.litres / o.tank * 100)));
-      if (d.l100km > 0) $('cons').value = d.l100km;
-      const ago = d.at && d.now ? Math.max(0, Math.round((d.now - d.at) / 60000)) : null;
-      info.innerHTML = '🚗 来自车辆：剩 <b>' + d.litres + ' 升</b>' + (d.l100km > 0 ? ' · 油耗 <b>' + d.l100km + '</b> L/100km' : '') +
-        (ago != null ? ' · ' + (ago < 1 ? '刚刚' : ago + ' 分钟前') : '');
-      paintFuel(); save(); if (st.last) render();
+      applyCar(await r.json());
     } catch (e) {
       info.innerHTML = '🚗 连不上车辆（车机没通电联网，或手机没开 Tailscale），先用手动数值';
     } finally { clearTimeout(timer); }
+  }
+  /** Back from the car (Fuel Link's /go): #car=<litres>,<l100km>,<at>,<now>; kept, and the hash taken off the address. */
+  function fromHash() {
+    const m = /^#car=([^&]*)/.exec(location.hash || '');
+    let d = null;
+    if (m) {
+      const v = decodeURIComponent(m[1]).split(',').map((x) => (x === '' ? null : Number(x)));
+      d = { litres: v[0], l100km: v[1], at: v[2], now: v[3], got: Date.now() };
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
+      try { localStorage.setItem('shellDieselCar', JSON.stringify(d)); } catch (e) { /* not kept */ }
+      applyCar(d);
+      return true;
+    }
+    // no new reading: show the last one kept, with its age
+    try { d = JSON.parse(localStorage.getItem('shellDieselCar') || 'null'); } catch (e) { d = null; }
+    if (d && d.litres != null && /^http:\/\//.test(carBase())) {
+      const age = Math.round((Date.now() - d.got) / 60000);
+      applyCar({ litres: d.litres, l100km: d.l100km, at: d.at, now: d.now + (Date.now() - d.got) }, '点"读取"更新');
+      if (age > 30) $('carInfo').innerHTML += ' <span class="err">（' + (age < 120 ? age + ' 分钟' : Math.round(age / 60) + ' 小时') + '前读的）</span>';
+      return true;
+    }
+    return false;
   }
   $('carBtn').addEventListener('click', () => { save(); readCar(false); });
   $('carUrl').addEventListener('change', save);
@@ -630,7 +663,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   const eur = (v) => v.toFixed(2).replace('.', ',') + ' €';
   function esc(t) { return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
-  paintFuel(); paintMode(); showPicked('to'); readCar(false);
+  paintFuel(); paintMode(); showPicked('to'); if (!fromHash()) readCar(true);
 })();
 </script>
 </body>
