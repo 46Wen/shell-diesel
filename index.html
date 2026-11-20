@@ -62,7 +62,9 @@
   .fact .k { font-size: 11px; color: var(--dim); }
   .fact .v { font-size: 15px; font-weight: 700; }
   .fact.total .v { color: var(--yellow); }
-  .hours { font-size: 13px; color: var(--dim); margin-bottom: 9px; }
+  .hours { font-size: 14px; font-weight: 600; margin-bottom: 9px; }
+  .hours.ok { color: var(--green); } .hours.warn { color: #ffb020; } .hours.no { color: #ff6b5b; } .hours.unk { color: var(--dim); font-weight: 400; }
+  .st.closed { opacity: .6; }
   .acts { display: flex; gap: 8px; }
   .acts button, .acts a { flex: 1; text-align: center; font-size: 15px; text-decoration: none; padding: 10px; border-radius: 10px; }
   .copy { background: var(--yellow); color: #111; font-weight: 700; }
@@ -226,6 +228,65 @@ const CORE = (() => {
     rows.sort((a, b) => a.total - b.total || (a.detS != null ? a.detS - b.detS : a.toS - b.toS));
     return { direct, litres, rows };
   }
+  // ---- opening hours: "L-S: 08:00-19:00; D: 09:00-18:00", "L-V: 09:00-13:00 y 15:00-18:00", "L-D: 24H" ----
+  const DAY = { L: 1, M: 2, X: 3, J: 4, V: 5, S: 6, D: 0 };
+  /**
+   * The week's open intervals from the ministry's text: [[from, to], ...] in minutes from Monday 00:00, to past
+   * from when it runs past midnight; null when the text can't be read, or names Monday alone (an unfinished entry).
+   */
+  function parseHours(text) {
+    const t = String(text || '').toUpperCase().trim();
+    if (!t) return null;
+    const out = [], days = new Set();
+    for (const seg of t.split(';')) {
+      const m = seg.match(/^\s*([LMXJVSD](?:\s*[-,Y]\s*[LMXJVSD])*)\s*:\s*(.+)$/);
+      if (!m) return null;
+      const list = [];
+      m[1].replace(/\s/g, '').split(/[,Y]/).forEach((part) => {
+        const r = part.split('-');
+        if (r.length === 1) list.push(DAY[r[0]]);
+        else { let d = DAY[r[0]]; const e = DAY[r[1]]; for (let n = 0; n < 7; n++) { list.push(d); if (d === e) break; d = (d + 1) % 7; } }
+      });
+      const times = [];
+      if (/24\s*H/.test(m[2])) times.push([0, 1440]);
+      m[2].replace(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/g, (x, h1, m1, h2, m2) => {
+        const a = +h1 * 60 + +m1; let b = +h2 * 60 + +m2;
+        if (b === 1439) b = 1440;                 // 23:59: to midnight
+        if (b <= a) b += 1440;                    // 06:00-00:00, 07:00-02:00: past midnight
+        times.push([a, b]);
+      });
+      if (!times.length) return null;
+      list.forEach((d) => {
+        days.add(d);
+        const base = ((d + 6) % 7) * 1440;      // Monday first
+        times.forEach(([a, b]) => out.push([base + a, base + b]));
+      });
+    }
+    if (days.size === 1 && days.has(1)) return null;   // "L: ..." only: Monday alone, not filled in
+    return out.length ? out : null;
+  }
+  /**
+   * Open or not at a moment (weekday 0 Sunday..6, minutes since midnight there), and for how long:
+   * { open, always, mins } (mins: until it closes when open, until it opens when closed), or null (hours unknown).
+   */
+  function hoursAt(intervals, weekday, minute) {
+    if (!intervals) return null;
+    const W = 7 * 1440, now = ((weekday + 6) % 7) * 1440 + minute;
+    // the week three times over, so the hours of the week before and after count too; then merged
+    const all = [];
+    [-W, 0, W].forEach((o) => intervals.forEach(([a, b]) => all.push([a + o, b + o])));
+    all.sort((x, y) => x[0] - y[0]);
+    const merged = [];
+    all.forEach(([a, b]) => { const l = merged[merged.length - 1]; if (l && a <= l[1]) l[1] = Math.max(l[1], b); else merged.push([a, b]); });
+    const cur = merged.find(([a, b]) => a <= now && now < b);
+    if (cur) {
+      if (cur[1] - cur[0] >= 2 * W) return { open: true, always: true, mins: Infinity };
+      return { open: true, always: false, mins: cur[1] - now };
+    }
+    const next = merged.find(([a]) => a > now);
+    return { open: false, always: false, mins: next ? next[0] - now : Infinity };
+  }
+
   /** "AVENIDA DE AMERICA, 25" -> "Avenida De America, 25" (the data is all upper case). */
   function nice(t) {
     return String(t || '').toLowerCase().replace(/(^|[\s,.(\/-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase())
@@ -234,7 +295,7 @@ const CORE = (() => {
   function fullAddress(s) {
     return [nice(s.a), [s.cp, nice(s.mun || s.loc)].filter(Boolean).join(' '), nice(s.prov)].filter(Boolean).join(', ');
   }
-  return { km, kmToLine, nearRoute, nearPoint, rank, nice, fullAddress };
+  return { km, kmToLine, nearRoute, nearPoint, rank, nice, fullAddress, parseHours, hoursAt };
 })();
 if (typeof module !== 'undefined') module.exports = CORE;
 </script>
@@ -450,6 +511,31 @@ if (typeof module !== 'undefined') module.exports = CORE;
   }
 
   const waze = (p) => 'https://waze.com/ul?ll=' + p.lat + ',' + p.lon + '&navigate=yes';
+  /** Weekday (0 Sunday) and minutes since midnight at the station: mainland time, or the Canaries' (an hour behind). */
+  function localNow(s, at) {
+    const tz = /PALMAS|TENERIFE/.test(String(s.prov).toUpperCase()) ? 'Atlantic/Canary' : 'Europe/Madrid';
+    const f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const p = {}; f.formatToParts(at).forEach((x) => { p[x.type] = x.value; });
+    return { wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday), min: +p.hour * 60 + +p.minute };
+  }
+  /** Open now, open when you get there, and the line to show: { cls, text, rank } (rank 0 open on arrival, 1 unknown, 2 closed). */
+  function openState(s, arriveS) {
+    if (!s._hours) s._hours = CORE.parseHours(s.h) || 'none';
+    const iv = s._hours === 'none' ? null : s._hours;
+    const n = localNow(s, new Date()), now = CORE.hoursAt(iv, n.wd, n.min);
+    if (!now) return { cls: 'unk', text: '⚪ 营业状态未知', rank: 1 };
+    if (now.always) return { cls: 'ok', text: '🟢 24 小时营业', rank: 0 };
+    const arrive = Math.round(arriveS / 60);
+    if (now.open) {
+      if (now.mins <= arrive) return { cls: 'no', text: '🔴 营业中，但你到之前就关门了（' + dur(now.mins) + '后关门，开过去要 ' + dur(arrive) + '）', rank: 2 };
+      if (now.mins - arrive < 30) return { cls: 'warn', text: '🟠 营业中 · ' + dur(now.mins) + '后关门（到站后只剩 ' + dur(now.mins - arrive) + '）', rank: 0 };
+      return { cls: 'ok', text: '🟢 营业中 · 还有 ' + dur(now.mins) + '关门', rank: 0 };
+    }
+    if (now.mins === Infinity) return { cls: 'no', text: '🔴 已关门', rank: 2 };
+    if (now.mins <= arrive) return { cls: 'warn', text: '🟠 现在关着，' + dur(now.mins) + '后开门，你到的时候已经开了', rank: 0 };
+    return { cls: 'no', text: '🔴 已关门 · ' + dur(now.mins) + '后开门', rank: 2 };
+  }
+  const dur = (m) => m < 60 ? m + ' 分钟' : Math.floor(m / 60) + ' 小时' + (m % 60 ? ' ' + (m % 60) + ' 分' : '');
   function render() {
     const L = st.last, o = readOpts(), fuel = st.fuel;
     const res = CORE.rank(L.cands, L.table, fuel, o);
@@ -459,7 +545,9 @@ if (typeof module !== 'undefined') module.exports = CORE;
       : '<div class="route">从当前位置出发，' + o.radius + ' 公里内 · ' + fname + ' · 加 ' + res.litres.toFixed(0) + ' 升</div>';
     const out = $('out');
     if (!res.rows.length) { out.innerHTML = head + '<div class="msg">没有找到有 ' + fname + ' 的 Shell 站</div>'; return; }
-    const rows = res.rows.slice(0, 10), best = rows[0].total;
+    res.rows.forEach((r) => { r.open = openState(r.s, r.toS); });
+    const rows = res.rows.slice().sort((a, b) => a.open.rank - b.open.rank || a.total - b.total).slice(0, 10);
+    const best = rows[0].total;
     out.innerHTML = head + rows.map((r, i) => {
       const s = r.s, addr = CORE.fullAddress(s);
       const more = i ? '<div class="save">比第 1 名多花 ' + eur(r.total - best) + '</div>' : '';
@@ -472,14 +560,14 @@ if (typeof module !== 'undefined') module.exports = CORE;
           '<div class="acts2"><a class="waze2" href="' + waze(L.to) + '" target="_blank" rel="noopener">② 加完油：Waze 去目的地</a></div>'
         : '<div class="acts"><button class="copy" data-addr="' + esc(addr) + '">复制地址</button>' +
           '<a class="waze" href="' + waze(s) + '" target="_blank" rel="noopener">Waze 导航过去</a></div>';
-      return '<div class="st' + (i ? '' : ' best') + '">' +
+      return '<div class="st' + (i ? '' : ' best') + (r.open.rank === 2 ? ' closed' : '') + '">' +
         '<div class="top"><div><span class="rank">' + (i + 1) + '</span><span class="name">' + esc(CORE.nice(s.n)) + ' · ' + esc(CORE.nice(s.mun || s.loc)) + '</span>' +
         '<div class="addr">' + esc(addr) + '</div>' + more + '</div>' +
         '<div class="price"><div class="p">' + r.price.toFixed(3) + '</div><div class="u">€ / 升</div></div></div>' +
         '<div class="facts">' + facts +
         '<div class="fact total" style="grid-column: span 3"><div class="k">实际总花费（加满 + ' + (L.withDest ? '绕路' : '路上') + '油费）</div><div class="v">' + eur(r.total) + '</div></div>' +
         '</div>' +
-        '<div class="hours">🕒 营业时间：' + esc(s.h || '未知') + '</div>' + nav + '</div>';
+        '<div class="hours ' + r.open.cls + '">' + r.open.text + '</div>' + nav + '</div>';
     }).join('') + (L.withDest ? '<div class="note" style="text-align:center">Waze 的链接只能设一个目的地，没法自动加中途站：先点 ①，加完油再点 ②。</div>' : '');
     out.querySelectorAll('.copy').forEach((b) => b.addEventListener('click', () => copy(b)));
   }
