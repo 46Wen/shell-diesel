@@ -132,8 +132,9 @@
     </div>
     <div class="gap"></div>
     <label class="t">现在剩多少油</label>
-    <input type="range" id="fuelPct" min="0" max="100" step="5" value="25">
+    <input type="range" id="fuelPct" min="0" max="100" step="1" value="25">
     <div class="fuelinfo"><span>剩 <b id="pctTxt"></b></span><span>需要加 <b id="litTxt"></b></span></div>
+    <div class="note" id="carInfo"></div>
     <div class="gap"></div>
     <details>
       <summary>更多设置</summary>
@@ -143,6 +144,11 @@
         <div><label>附近范围 (公里)</label><input type="number" id="radius" min="5" max="80" step="5" inputmode="numeric"></div>
       </div>
       <div class="note">"附近范围"只用于不设目的地时：在这个距离内找加油站。</div>
+      <div class="gap"></div>
+      <label class="t">车辆地址（Tailscale，选填）</label>
+      <div class="row"><input type="text" id="carUrl" placeholder="https://车机名.xxxx.ts.net" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button class="btn" id="carBtn">读取</button></div>
+      <div class="note">填了之后，打开网页时会自动读取车上的剩余油量和油耗（手机需要开着 Tailscale，车机需要通电联网）。</div>
     </details>
   </div>
 
@@ -306,7 +312,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   const $ = (id) => document.getElementById(id);
   const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
   const OSRM = 'https://router.project-osrm.org';
-  const DEF = { fuel: 'ga', pct: 25, tank: 59, cons: 6.5, radius: 25, mode: 'dest' };
+  const DEF = { fuel: 'ga', pct: 25, tank: 59, cons: 6.5, radius: 25, mode: 'dest', carUrl: '' };
   const CORRIDOR_KM = 8;          // with a destination: stations at most this far from the route are looked at
   const st = { data: null, from: null, to: null, fuel: DEF.fuel, mode: DEF.mode, favs: [], last: null };
 
@@ -318,6 +324,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   st.mode = opt.mode === 'none' ? 'none' : 'dest';
   st.favs = Array.isArray(saved.favs) ? saved.favs.filter((f) => f && isFinite(f.lat) && isFinite(f.lon) && f.name) : [];
   $('fuelPct').value = opt.pct; $('tank').value = opt.tank; $('cons').value = opt.cons; $('radius').value = opt.radius;
+  $('carUrl').value = opt.carUrl || '';
   if (saved.to) { st.to = saved.to; $('toQ').value = saved.to.label; }
   function readOpts() {
     const n = (id, d, lo, hi) => { const v = parseFloat($(id).value); return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
@@ -327,7 +334,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   function save() {
     try {
       localStorage.setItem('shellDiesel', JSON.stringify(Object.assign(readOpts(),
-        { fuel: st.fuel, mode: st.mode, to: st.to, favs: st.favs })));
+        { fuel: st.fuel, mode: st.mode, to: st.to, favs: st.favs, carUrl: $('carUrl').value.trim() })));
     } catch (e) { /* private mode: nothing kept */ }
   }
 
@@ -387,6 +394,37 @@ if (typeof module !== 'undefined') module.exports = CORE;
   }));
   ['fuelPct', 'tank', 'cons'].forEach((id) => $(id).addEventListener('input', () => { paintFuel(); save(); if (st.last) render(); }));
   $('radius').addEventListener('change', save);
+
+  // ---- the car (Fuel Link on the head unit, over the tailnet): fuel left and consumption ----
+  function carBase() {
+    let u = $('carUrl').value.trim().replace(/\/+$/, '');
+    if (u && !/^https?:\/\//.test(u)) u = 'https://' + u;
+    return u;
+  }
+  async function readCar(quiet) {
+    const base = carBase(), info = $('carInfo');
+    if (!base) { info.textContent = ''; return; }
+    if (!quiet) info.textContent = '🚗 正在读取车辆数据…';
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = setTimeout(() => ctl && ctl.abort(), 5000);
+    try {
+      const r = await fetch(base + '/fuel', { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (d.litres == null) { info.innerHTML = '🚗 车机连上了，但还没收到油量（车刚启动时等几秒再点"读取"）'; return; }
+      const o = readOpts();
+      $('fuelPct').value = Math.max(0, Math.min(100, Math.round(d.litres / o.tank * 100)));
+      if (d.l100km > 0) $('cons').value = d.l100km;
+      const ago = d.at && d.now ? Math.max(0, Math.round((d.now - d.at) / 60000)) : null;
+      info.innerHTML = '🚗 来自车辆：剩 <b>' + d.litres + ' 升</b>' + (d.l100km > 0 ? ' · 油耗 <b>' + d.l100km + '</b> L/100km' : '') +
+        (ago != null ? ' · ' + (ago < 1 ? '刚刚' : ago + ' 分钟前') : '');
+      paintFuel(); save(); if (st.last) render();
+    } catch (e) {
+      info.innerHTML = '🚗 连不上车辆（车机没通电联网，或手机没开 Tailscale），先用手动数值';
+    } finally { clearTimeout(timer); }
+  }
+  $('carBtn').addEventListener('click', () => { save(); readCar(false); });
+  $('carUrl').addEventListener('change', save);
 
   // ---- the prices ----
   fetch('data/shell.json', { cache: 'no-cache' }).then((r) => {
@@ -592,7 +630,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   const eur = (v) => v.toFixed(2).replace('.', ',') + ' €';
   function esc(t) { return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
-  paintFuel(); paintMode(); showPicked('to');
+  paintFuel(); paintMode(); showPicked('to'); readCar(false);
 })();
 </script>
 </body>
