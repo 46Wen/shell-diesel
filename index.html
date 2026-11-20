@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shell 柴油">
+<meta name="theme-color" content="#0f1115">
+<title>顺路最便宜的 Shell 柴油</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #181b22; --card2: #1f232c; --line: #2a2f3a;
+    --text: #eef1f5; --dim: #9aa3b2; --yellow: #ffd500; --red: #e3311c; --green: #39c27a; --blue: #4a9dff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; }
+  main { max-width: 640px; margin: 0 auto;
+    padding: calc(14px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 21px; margin: 4px 0 2px; display: flex; align-items: center; gap: 10px; }
+  .logo { width: 28px; height: 28px; border-radius: 50%; background: var(--yellow); border: 3px solid var(--red); flex: none; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  label.t { display: block; color: var(--dim); font-size: 13px; margin: 0 0 6px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  input[type=text], input[type=number] {
+    width: 100%; background: var(--card2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 12px; font-size: 16px; }
+  input:focus { outline: 2px solid var(--blue); border-color: transparent; }
+  button { font: inherit; border: 0; border-radius: 10px; padding: 11px 14px; cursor: pointer; }
+  .btn { background: var(--card2); color: var(--text); border: 1px solid var(--line); white-space: nowrap; }
+  .primary { width: 100%; background: var(--yellow); color: #111; font-weight: 700; font-size: 17px; padding: 14px; }
+  .primary:disabled { opacity: .5; }
+  .seg { display: flex; background: var(--card2); border-radius: 10px; padding: 3px; }
+  .seg button { flex: 1; background: transparent; color: var(--dim); padding: 9px 6px; }
+  .seg button.on { background: var(--yellow); color: #111; font-weight: 700; }
+  .picked { margin-top: 8px; font-size: 14px; color: var(--green); }
+  .opts { margin-top: 6px; }
+  .opts button { display: block; width: 100%; text-align: left; background: var(--card2); color: var(--text);
+    border: 1px solid var(--line); margin-top: 6px; font-size: 14px; }
+  .gap { height: 12px; }
+  input[type=range] { width: 100%; accent-color: var(--yellow); }
+  .fuelinfo { display: flex; justify-content: space-between; font-size: 14px; color: var(--dim); margin-top: 4px; }
+  .fuelinfo b { color: var(--text); }
+  details summary { color: var(--dim); font-size: 14px; cursor: pointer; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .grid3 label { font-size: 12px; color: var(--dim); }
+  .msg { color: var(--dim); font-size: 14px; text-align: center; padding: 10px; }
+  .err { color: #ff8a7a; }
+  .route { font-size: 14px; color: var(--dim); margin: 4px 2px 10px; }
+  .st { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 13px; margin-bottom: 10px; }
+  .st.best { border-color: var(--yellow); }
+  .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .rank { color: var(--yellow); font-weight: 800; margin-right: 6px; }
+  .name { font-weight: 700; }
+  .addr { color: var(--dim); font-size: 13px; margin-top: 2px; }
+  .price { text-align: right; flex: none; }
+  .price .p { font-size: 22px; font-weight: 800; }
+  .price .u { font-size: 12px; color: var(--dim); }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 8px; }
+  .fact { background: var(--card2); border-radius: 9px; padding: 7px 8px; }
+  .fact .k { font-size: 11px; color: var(--dim); }
+  .fact .v { font-size: 15px; font-weight: 700; }
+  .fact.total .v { color: var(--yellow); }
+  .hours { font-size: 13px; color: var(--dim); margin-bottom: 9px; }
+  .acts { display: flex; gap: 8px; }
+  .acts button, .acts a { flex: 1; text-align: center; font-size: 15px; text-decoration: none; padding: 10px; border-radius: 10px; }
+  .copy { background: var(--yellow); color: #111; font-weight: 700; }
+  .copy.done { background: var(--green); }
+  .waze { background: #33ccff; color: #062b3a; font-weight: 700; }
+  .save { font-size: 12px; color: var(--green); margin-top: 2px; }
+  .foot { color: var(--dim); font-size: 12px; text-align: center; margin-top: 18px; }
+  .foot a { color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="logo"></span>顺路最便宜的 Shell 柴油</h1>
+  <div class="sub" id="dataInfo">正在读取油价…</div>
+
+  <div class="card">
+    <label class="t">出发地</label>
+    <div class="row">
+      <input type="text" id="fromQ" placeholder="当前位置，或输入地址">
+      <button class="btn" id="hereBtn">📍 定位</button>
+    </div>
+    <div class="opts" id="fromOpts"></div>
+    <div class="picked" id="fromPicked"></div>
+    <div class="gap"></div>
+    <label class="t">目的地</label>
+    <div class="row">
+      <input type="text" id="toQ" placeholder="例如：Plaza Mayor, Madrid" enterkeyhint="search">
+      <button class="btn" id="toBtn">搜索</button>
+    </div>
+    <div class="opts" id="toOpts"></div>
+    <div class="picked" id="toPicked"></div>
+  </div>
+
+  <div class="card">
+    <label class="t">油品</label>
+    <div class="seg" id="fuelSeg">
+      <button data-f="ga" class="on">Diésel normal</button>
+      <button data-f="gp">Diésel premium</button>
+    </div>
+    <div class="gap"></div>
+    <label class="t">现在剩多少油</label>
+    <input type="range" id="fuelPct" min="0" max="100" step="5" value="25">
+    <div class="fuelinfo"><span>剩 <b id="pctTxt"></b></span><span>需要加 <b id="litTxt"></b></span></div>
+    <div class="gap"></div>
+    <details>
+      <summary>更多设置</summary>
+      <div class="grid3">
+        <div><label>油箱 (升)</label><input type="number" id="tank" min="20" max="120" step="1" inputmode="decimal"></div>
+        <div><label>油耗 (L/100km)</label><input type="number" id="cons" min="2" max="20" step="0.1" inputmode="decimal"></div>
+        <div><label>最多绕路 (分钟)</label><input type="number" id="maxDet" min="1" max="60" step="1" inputmode="numeric"></div>
+      </div>
+    </details>
+  </div>
+
+  <button class="primary" id="goBtn">查找顺路的 Shell 加油站</button>
+  <div class="gap"></div>
+  <div id="out"></div>
+
+  <div class="foot">
+    油价：西班牙工业部 Geoportal de Gasolineras（官方牌价，不含 ClubSmart 折扣）。<br>
+    地址搜索 © OpenStreetMap（Nominatim），路线 © OSRM。
+  </div>
+</main>
+
+<script>
+/* ---------- pure helpers (tested outside the page) ---------- */
+const CORE = (() => {
+  const R = 6371;
+  const rad = (d) => d * Math.PI / 180;
+  /** km between two points (haversine). */
+  function km(a, b) {
+    const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  /** km from point p to the polyline line ([[lon, lat], ...]), on a local flat projection. */
+  function kmToLine(p, line) {
+    const kx = Math.cos(rad(p.lat)) * Math.PI * R / 180, ky = Math.PI * R / 180;
+    let best = Infinity;
+    for (let i = 0; i < line.length - 1; i++) {
+      const ax = (line[i][0] - p.lon) * kx, ay = (line[i][1] - p.lat) * ky;
+      const bx = (line[i + 1][0] - p.lon) * kx, by = (line[i + 1][1] - p.lat) * ky;
+      const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+      let t = l2 ? -(ax * dx + ay * dy) / l2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const x = ax + t * dx, y = ay + t * dy, d = Math.sqrt(x * x + y * y);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+  /** Stations within corridorKm of the route with the fuel, the cheapest first, at most max. */
+  function nearRoute(stations, line, fuel, corridorKm, max) {
+    let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+    line.forEach(([lon, lat]) => { minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat); minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon); });
+    const padLat = corridorKm / 111, padLon = corridorKm / (111 * Math.cos(rad((minLat + maxLat) / 2)));
+    const near = stations.filter((s) => s[fuel] > 0 &&
+      s.lat >= minLat - padLat && s.lat <= maxLat + padLat && s.lon >= minLon - padLon && s.lon <= maxLon + padLon &&
+      kmToLine(s, line) <= corridorKm);
+    near.sort((a, b) => a[fuel] - b[fuel]);
+    return near.slice(0, max);
+  }
+  /**
+   * Rank the candidates. table: OSRM table with sources [origin, ...cands] and destinations [dest, ...cands]:
+   * durations[0][0] origin->dest, [0][k] origin->cand k, [k][0] cand k->dest (seconds; distances in metres).
+   */
+  function rank(cands, table, fuel, o) {
+    const D = table.durations, M = table.distances;
+    const direct = { s: D[0][0], m: M[0][0] };
+    const litres = Math.max(0, o.tank * (1 - o.pct / 100));
+    const rows = [];
+    cands.forEach((s, i) => {
+      const k = i + 1;
+      const toS = D[0][k], sToB = D[k][0], toSm = M[0][k], sToBm = M[k][0];
+      if (toS == null || sToB == null || !(s[fuel] > 0)) return;   // no route, or no such fuel there
+      const detS = Math.max(0, toS + sToB - direct.s), detM = Math.max(0, toSm + sToBm - direct.m);
+      if (detS / 60 > o.maxDet) return;
+      const price = s[fuel], fill = litres * price, detCost = detM / 1000 * o.cons / 100 * price;
+      rows.push({ s, price, litres, fill, detCost, total: fill + detCost, detS, detM, toS, toSm });
+    });
+    rows.sort((a, b) => a.total - b.total || a.detS - b.detS);
+    return { direct, litres, rows };
+  }
+  /** "AVENIDA DE AMERICA, 25" -> "Avenida De America, 25" (the data is all upper case). */
+  function nice(t) {
+    return String(t || '').toLowerCase().replace(/(^|[\s,.(\/-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase())
+      .replace(/ (De|Del|La|Las|Los|El|Y)(?= )/g, (m, w) => ' ' + w.toLowerCase());
+  }
+  function fullAddress(s) {
+    return [nice(s.a), [s.cp, nice(s.mun || s.loc)].filter(Boolean).join(' '), nice(s.prov)].filter(Boolean).join(', ');
+  }
+  return { km, kmToLine, nearRoute, rank, nice, fullAddress };
+})();
+if (typeof module !== 'undefined') module.exports = CORE;
+</script>
+
+<script>
+(() => {
+  if (typeof document === 'undefined') return;
+  const $ = (id) => document.getElementById(id);
+  const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+  const OSRM = 'https://router.project-osrm.org';
+  const DEF = { fuel: 'ga', pct: 25, tank: 59, cons: 6.5, maxDet: 10 };
+  const st = { data: null, from: null, to: null, fuel: DEF.fuel };
+
+  // ---- settings, remembered on this phone ----
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('shellDiesel') || '{}') || {}; } catch (e) { saved = {}; }
+  const opt = Object.assign({}, DEF, saved);
+  st.fuel = opt.fuel === 'gp' ? 'gp' : 'ga';
+  $('fuelPct').value = opt.pct; $('tank').value = opt.tank; $('cons').value = opt.cons; $('maxDet').value = opt.maxDet;
+  if (saved.to) { st.to = saved.to; $('toQ').value = saved.to.label; showPicked('to'); }
+  function readOpts() {
+    const n = (id, d, lo, hi) => { const v = parseFloat($(id).value); return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
+    return { fuel: st.fuel, pct: n('fuelPct', DEF.pct, 0, 100), tank: n('tank', DEF.tank, 20, 120),
+      cons: n('cons', DEF.cons, 2, 20), maxDet: n('maxDet', DEF.maxDet, 1, 60) };
+  }
+  function save() {
+    try { localStorage.setItem('shellDiesel', JSON.stringify(Object.assign(readOpts(), { to: st.to }))); } catch (e) { /* private mode */ }
+  }
+
+  // ---- fuel type and tank ----
+  function paintFuel() {
+    document.querySelectorAll('#fuelSeg button').forEach((b) => b.classList.toggle('on', b.dataset.f === st.fuel));
+    const o = readOpts(), lit = Math.max(0, o.tank * (1 - o.pct / 100));
+    $('pctTxt').textContent = o.pct + ' %（约 ' + (o.tank * o.pct / 100).toFixed(0) + ' 升）';
+    $('litTxt').textContent = lit.toFixed(0) + ' 升';
+  }
+  document.querySelectorAll('#fuelSeg button').forEach((b) => b.addEventListener('click', () => {
+    st.fuel = b.dataset.f; paintFuel(); save(); if (st.last) render(st.last.route, st.last.cands, st.last.table);
+  }));
+  ['fuelPct', 'tank', 'cons', 'maxDet'].forEach((id) => $(id).addEventListener('input', () => {
+    paintFuel(); save(); if (st.last) render(st.last.route, st.last.cands, st.last.table);
+  }));
+  paintFuel();
+
+  // ---- the prices ----
+  fetch('data/shell.json', { cache: 'no-cache' }).then((r) => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then((d) => {
+    st.data = d;
+    const age = (Date.now() / 1000 - (d.updated || 0)) / 3600;
+    $('dataInfo').innerHTML = '油价时间：' + esc(d.fecha || '?') + ' · ' + d.stations.length + ' 个 Shell 站（不含 Express）' +
+      (age > 6 ? ' <span class="err">· 数据已 ' + Math.round(age) + ' 小时未更新</span>' : '');
+  }).catch((e) => { $('dataInfo').innerHTML = '<span class="err">读不到油价数据（' + esc(e.message) + '）</span>'; });
+
+  // ---- places ----
+  function showPicked(which) {
+    const p = st[which];
+    $(which + 'Picked').textContent = p ? '✓ ' + p.label : '';
+  }
+  async function search(which) {
+    const q = $(which + 'Q').value.trim();
+    const box = $(which + 'Opts');
+    if (!q) return;
+    box.innerHTML = '<div class="msg">搜索中…</div>';
+    try {
+      const u = NOMINATIM + '?format=jsonv2&limit=5&countrycodes=es&accept-language=es&q=' + encodeURIComponent(q);
+      const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const list = await r.json();
+      if (!list.length) { box.innerHTML = '<div class="msg">没找到，换个写法试试（可以加上城市名）</div>'; return; }
+      box.innerHTML = '';
+      list.forEach((x) => {
+        const b = document.createElement('button');
+        b.textContent = x.display_name;
+        b.addEventListener('click', () => {
+          st[which] = { lat: +x.lat, lon: +x.lon, label: x.display_name.split(',').slice(0, 3).join(',') };
+          $(which + 'Q').value = st[which].label; box.innerHTML = ''; showPicked(which); save();
+        });
+        box.appendChild(b);
+      });
+    } catch (e) { box.innerHTML = '<div class="msg err">搜索失败：' + esc(e.message) + '</div>'; }
+  }
+  $('toBtn').addEventListener('click', () => search('to'));
+  $('toQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search('to'); } });
+  $('fromQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search('from'); } });
+  $('fromQ').addEventListener('input', () => { st.from = null; showPicked('from'); });
+  $('toQ').addEventListener('input', () => { st.to = null; showPicked('to'); });
+
+  function locate() {
+    return new Promise((ok, no) => {
+      if (!navigator.geolocation) return no(new Error('这个浏览器不能定位'));
+      navigator.geolocation.getCurrentPosition(
+        (p) => ok({ lat: p.coords.latitude, lon: p.coords.longitude, label: '当前位置' }),
+        (e) => no(new Error(e.code === 1 ? '没有定位权限，请在设置里允许 Safari 定位，或手动输入出发地' : '定位失败，请手动输入出发地')),
+        { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 });
+    });
+  }
+  $('hereBtn').addEventListener('click', async () => {
+    $('fromPicked').textContent = '定位中…';
+    try { st.from = await locate(); $('fromQ').value = ''; showPicked('from'); }
+    catch (e) { $('fromPicked').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  });
+
+  // ---- find ----
+  $('goBtn').addEventListener('click', go);
+  async function go() {
+    const out = $('out');
+    if (!st.data) { out.innerHTML = '<div class="msg err">油价数据还没读到</div>'; return; }
+    if (!st.to) {
+      if ($('toQ').value.trim()) { await search('to'); out.innerHTML = '<div class="msg">请先在上面的结果里点选目的地</div>'; }
+      else out.innerHTML = '<div class="msg err">请输入目的地</div>';
+      return;
+    }
+    $('goBtn').disabled = true;
+    try {
+      if (!st.from) {
+        if ($('fromQ').value.trim()) { await search('from'); out.innerHTML = '<div class="msg">请先在上面的结果里点选出发地</div>'; return; }
+        out.innerHTML = '<div class="msg">正在定位…</div>';
+        st.from = await locate(); showPicked('from');
+      }
+      out.innerHTML = '<div class="msg">计算路线…</div>';
+      const A = st.from, B = st.to;
+      const r = await (await fetch(OSRM + '/route/v1/driving/' + A.lon + ',' + A.lat + ';' + B.lon + ',' + B.lat +
+        '?overview=full&geometries=geojson')).json();
+      if (r.code !== 'Ok' || !r.routes || !r.routes.length) throw new Error('找不到路线（' + (r.message || r.code) + '）');
+      const route = r.routes[0];
+      const o = readOpts();
+      // corridor: about how far one could go off the route and back within the detour allowed
+      const corridor = Math.max(2, Math.min(15, o.maxDet * 0.6));
+      const both = CORE.nearRoute(st.data.stations, route.geometry.coordinates, 'ga', corridor, 1e9)
+        .concat(CORE.nearRoute(st.data.stations, route.geometry.coordinates, 'gp', corridor, 1e9));
+      // the cheapest of each fuel type, so switching the type needs no new request
+      const seen = {}, cands = [];
+      ['ga', 'gp'].forEach((f) => both.filter((s) => s[f] > 0).sort((a, b) => a[f] - b[f]).forEach((s) => {
+        if (!seen[s.id] && cands.filter((c) => c[f] > 0).length < 45) { seen[s.id] = true; cands.push(s); }
+      }));
+      if (!cands.length) { st.last = null; out.innerHTML = '<div class="msg">路线 ' + corridor.toFixed(0) + ' 公里内没有 Shell 加油站，试试把"最多绕路"调大</div>'; return; }
+      out.innerHTML = '<div class="msg">计算每个加油站的绕路…</div>';
+      const pts = [A, B].concat(cands).map((p) => p.lon + ',' + p.lat).join(';');
+      const idx = cands.map((_, i) => i + 2).join(';');
+      const t = await (await fetch(OSRM + '/table/v1/driving/' + pts + '?sources=0;' + idx + '&destinations=1;' + idx +
+        '&annotations=duration,distance')).json();
+      if (t.code !== 'Ok') throw new Error('路线服务出错（' + (t.message || t.code) + '）');
+      // the table gives durations[source][destination]: keep only origin->x and x->dest
+      const table = { durations: [], distances: [] };
+      table.durations[0] = [t.durations[0][0]].concat(cands.map((_, i) => t.durations[0][i + 1]));
+      table.distances[0] = [t.distances[0][0]].concat(cands.map((_, i) => t.distances[0][i + 1]));
+      cands.forEach((_, i) => { table.durations[i + 1] = [t.durations[i + 1][0]]; table.distances[i + 1] = [t.distances[i + 1][0]]; });
+      st.last = { route, cands, table };
+      render(route, cands, table);
+    } catch (e) {
+      out.innerHTML = '<div class="msg err">' + esc(e.message) + '</div>';
+    } finally { $('goBtn').disabled = false; }
+  }
+
+  function render(route, cands, table) {
+    const o = readOpts(), fuel = st.fuel;
+    const res = CORE.rank(cands, table, fuel, o);
+    const out = $('out');
+    const head = '<div class="route">直达目的地：' + (route.distance / 1000).toFixed(1) + ' 公里 · ' + mins(route.duration) +
+      ' · ' + (fuel === 'gp' ? 'Diésel premium' : 'Diésel normal') + ' · 加 ' + res.litres.toFixed(0) + ' 升</div>';
+    if (!res.rows.length) { out.innerHTML = head + '<div class="msg">绕路 ' + o.maxDet + ' 分钟以内没有合适的 Shell 站，试试把"最多绕路"调大</div>'; return; }
+    const rows = res.rows.slice(0, 10);
+    const best = rows[0].total;
+    out.innerHTML = head + rows.map((r, i) => {
+      const s = r.s, addr = CORE.fullAddress(s);
+      const more = i ? '<div class="save">比第 1 名多花 ' + eur(r.total - best) + '</div>' : '';
+      return '<div class="st' + (i ? '' : ' best') + '">' +
+        '<div class="top"><div><span class="rank">' + (i + 1) + '</span><span class="name">' + esc(CORE.nice(s.n)) + ' · ' + esc(CORE.nice(s.mun || s.loc)) + '</span>' +
+        '<div class="addr">' + esc(addr) + '</div>' + more + '</div>' +
+        '<div class="price"><div class="p">' + r.price.toFixed(3) + '</div><div class="u">€ / 升</div></div></div>' +
+        '<div class="facts">' +
+        fact('从出发地到站', (r.toSm / 1000).toFixed(1) + ' 公里 · ' + mins(r.toS)) +
+        fact('绕路', '+' + (r.detM / 1000).toFixed(1) + ' 公里 · +' + mins(r.detS)) +
+        fact('加满', eur(r.fill)) +
+        fact('绕路油费', eur(r.detCost)) +
+        '<div class="fact total" style="grid-column: span 2"><div class="k">实际总花费（加满 + 绕路油费）</div><div class="v">' + eur(r.total) + '</div></div>' +
+        '</div>' +
+        '<div class="hours">🕒 营业时间：' + esc(s.h || '未知') + '</div>' +
+        '<div class="acts"><button class="copy" data-addr="' + esc(addr) + '">复制地址</button>' +
+        '<a class="waze" href="https://waze.com/ul?ll=' + s.lat + ',' + s.lon + '&navigate=yes" target="_blank" rel="noopener">在 Waze 打开</a></div>' +
+        '</div>';
+    }).join('');
+    out.querySelectorAll('.copy').forEach((b) => b.addEventListener('click', () => copy(b)));
+  }
+
+  async function copy(b) {
+    const text = b.dataset.addr;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+      // older Safari: copy through a selected text field
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+      try { ok = document.execCommand('copy'); } catch (x) { ok = false; }
+      ta.remove();
+    }
+    b.textContent = ok ? '已复制 ✓' : '复制失败，请长按地址';
+    b.classList.toggle('done', ok);
+    setTimeout(() => { b.textContent = '复制地址'; b.classList.remove('done'); }, 2500);
+  }
+
+  const fact = (k, v) => '<div class="fact"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  const mins = (s) => { const m = Math.round(s / 60); return m < 60 ? m + ' 分钟' : Math.floor(m / 60) + ' 小时 ' + (m % 60) + ' 分'; };
+  const eur = (v) => v.toFixed(2).replace('.', ',') + ' €';
+  function esc(t) { return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+})();
+</script>
+</body>
+</html>
