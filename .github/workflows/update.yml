@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}        # "Run workflow" button for a first run by hand
   push:                        # and whenever the script or this file changes (the first run, too)
     branches: [main]
-    paths: ['scripts/**', '.github/workflows/**']
+    paths: ['scripts/**', '.github/workflows/**', 'data/express_ids.json']
 
 permissions:
   contents: write

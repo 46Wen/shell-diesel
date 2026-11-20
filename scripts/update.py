@@ -14,6 +14,8 @@ import urllib.request
 URL = ('https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/'
        'PreciosCarburantes/EstacionesTerrestres/')
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'shell.json')
+# Shell Express stations the ministry lists under the plain "SHELL" sign: DISA's own list, matched to station ids
+EXPRESS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'express_ids.json')
 
 
 def num(v):
@@ -47,11 +49,16 @@ def fetch():
 
 
 def main():
+    try:
+        with open(EXPRESS, encoding='utf-8') as f:
+            express = set(json.load(f)['ids'])
+    except (OSError, ValueError, KeyError):
+        express = set()
     raw = fetch()
     rows = raw.get('ListaEESSPrecio') or []
     out = []
     for s in rows:
-        if not is_shell(s.get('Rótulo')):
+        if not is_shell(s.get('Rótulo')) or s.get('IDEESS') in express:
             continue
         lat, lon = num(s.get('Latitud')), num(s.get('Longitud (WGS84)'))
         ga, gp = num(s.get('Precio Gasoleo A')), num(s.get('Precio Gasoleo Premium'))
