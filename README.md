@@ -1,23 +1,41 @@
-# 顺路最便宜的 Shell 柴油
+# Shell diésel más barata de camino
 
-手机网页：输入目的地，列出路线附近最划算的 Shell 加油站（不含 Shell Express），可以切换 Diésel normal / Diésel premium。
+Página para el móvil: con un destino, lista las gasolineras Shell más convenientes cerca de la ruta (sin Shell Express);
+sin destino, las de alrededor. Diésel normal o Diésel premium.
 
-每个加油站显示：
-- 每升价格、营业时间、地址；
-- 从出发地开到站的真实路线距离和时间；
-- 绕路多出多少公里和分钟；
-- 加满要多少钱（按你选的剩余油量和油箱容量计算）；
-- 实际总花费（加满 + 绕路多耗的油费），并按它排名；
-- "复制地址"和"在 Waze 打开"按钮。
+Cada gasolinera muestra:
+- el precio por litro, el horario y la dirección;
+- la distancia y el tiempo reales por carretera desde la salida;
+- cuántos km y minutos añade el desvío;
+- lo que cuesta llenar (según el combustible que queda y el depósito);
+- el coste real total (llenar + el combustible del desvío), por el que se ordenan;
+- los botones «Copiar dirección» e «Ir con Waze».
 
-## 数据来源
+## Modo coche (Copiloto de voz)
 
-- 油价：西班牙工业部 Geoportal de Gasolineras 开放数据（官方牌价，不含 ClubSmart 折扣）。
-  `.github/workflows/update.yml` 每小时运行 `scripts/update.py`，只保留 Shell 加油站，存到 `data/shell.json`。
-- 地址搜索：OpenStreetMap Nominatim。
-- 路线、距离、时间：OSRM 公共路线服务。
+Cuando el coche avisa de combustible bajo, la app *Copiloto de voz* (46Wen/apps) manda un aviso al iPhone (ntfy). Al
+tocarlo se abre esta página así:
 
-## 托管
+    https://46wen.github.io/shell-diesel/?auto=1&km=<autonomía>#car=<litros>,<l/100km>,<hora>,<ahora>
 
-GitHub Pages：Settings → Pages → Source 选 "Deploy from a branch"，分支选 `main`，目录选 `/ (root)`。
-网址是 `https://<用户名>.github.io/shell-diesel/`。在 iPhone Safari 打开后，点"分享"→"添加到主屏幕"。
+Con los litros y el consumo del coche, busca alrededor de su ubicación (el «radio cercano» de *Más ajustes*), se queda
+con las Shell abiertas cuando llegue y a menos de la mitad de la autonomía por carretera, elige la más barata (llenar +
+trayecto) y abre Waze hacia ella. Si no hay ninguna tan cerca, elige la más cercana abierta, para llegar seguro. Debajo
+queda la lista, por si prefiere otra.
+
+iOS solo deja que una página abra otra app con su propia pregunta: aparece «¿Abrir en Waze?» y basta con tocar
+*Abrir*. Para no tener que dar permiso de ubicación cada vez: Ajustes → Apps → Safari → Ubicación → Permitir.
+
+## Datos
+
+- Precios: datos abiertos del Geoportal de Gasolineras del Ministerio de Industria (precios oficiales, sin el
+  descuento ClubSmart). `.github/workflows/update.yml` ejecuta `scripts/update.py` cada hora: se queda solo con las
+  Shell y las guarda en `data/shell.json`.
+- Búsqueda de direcciones: OpenStreetMap Nominatim.
+- Rutas, distancias y tiempos: el servicio público de OSRM.
+
+## Publicación
+
+GitHub Pages: Settings → Pages → Source «Deploy from a branch», rama `main`, carpeta `/ (root)`.
+La dirección es `https://<usuario>.github.io/shell-diesel/`. En el iPhone, ábrala en Safari → Compartir → «Añadir a
+pantalla de inicio».

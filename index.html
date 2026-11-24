@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Shell 柴油">
+<meta name="apple-mobile-web-app-title" content="Shell diésel">
 <meta name="theme-color" content="#0f1115">
-<title>顺路最便宜的 Shell 柴油</title>
+<title>Shell diésel más barata de camino</title>
 <style>
   :root {
     --bg: #0f1115; --card: #181b22; --card2: #1f232c; --line: #2a2f3a;
@@ -14,7 +14,7 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; }
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
   main { max-width: 640px; margin: 0 auto;
     padding: calc(14px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom)); }
   h1 { font-size: 21px; margin: 4px 0 2px; display: flex; align-items: center; gap: 10px; }
@@ -87,78 +87,86 @@
   .note { font-size: 12px; color: var(--dim); margin-top: 6px; }
   .foot { color: var(--dim); font-size: 12px; text-align: center; margin-top: 18px; }
   .foot a { color: var(--dim); }
+  .auto { border-color: #33ccff; }
+  .auto .k { color: var(--dim); font-size: 13px; }
+  .auto .best { font-size: 19px; font-weight: 800; margin: 4px 0 2px; }
+  .auto .why { color: var(--dim); font-size: 13px; margin-bottom: 10px; }
+  .auto .go { display: block; text-align: center; background: #33ccff; color: #062b3a; font-weight: 800; font-size: 19px;
+    padding: 15px; border-radius: 12px; text-decoration: none; }
+  .auto .cancel { width: 100%; margin-top: 8px; background: transparent; color: var(--dim); }
 </style>
 </head>
 <body>
 <main>
-  <h1><span class="logo"></span>顺路最便宜的 Shell 柴油</h1>
-  <div class="sub" id="dataInfo">正在读取油价…</div>
+  <h1><span class="logo"></span>Shell diésel más barata de camino</h1>
+  <div class="sub" id="dataInfo">Leyendo los precios…</div>
+  <div class="card auto" id="autoBox" style="display:none"></div>
 
   <div class="card">
-    <label class="t">出发地</label>
+    <label class="t">Salida</label>
     <div class="row">
-      <input type="text" id="fromQ" placeholder="当前位置，或输入地址">
-      <button class="btn" id="hereBtn">📍 定位</button>
+      <input type="text" id="fromQ" placeholder="Ubicación actual, o escriba una dirección">
+      <button class="btn" id="hereBtn">📍 Ubicarme</button>
     </div>
     <div class="opts" id="fromOpts"></div>
     <div class="picked" id="fromPicked"></div>
     <div class="gap"></div>
-    <label class="t">目的地</label>
+    <label class="t">Destino</label>
     <div class="seg" id="modeSeg">
-      <button data-m="dest" class="on">去目的地（顺路）</button>
-      <button data-m="none">不设目的地（附近）</button>
+      <button data-m="dest" class="on">Hacia un destino (de camino)</button>
+      <button data-m="none">Sin destino (cerca)</button>
     </div>
     <div id="destBox">
       <div class="chips" id="favs"></div>
       <div class="row" style="margin-top:8px">
-        <input type="text" id="toQ" placeholder="例如：Plaza Mayor, Madrid" enterkeyhint="search">
-        <button class="btn" id="toBtn">搜索</button>
+        <input type="text" id="toQ" placeholder="Por ejemplo: Plaza Mayor, Madrid" enterkeyhint="search">
+        <button class="btn" id="toBtn">Buscar</button>
       </div>
       <div class="opts" id="toOpts"></div>
       <div class="picked" id="toPicked"></div>
-      <button class="link" id="favOpen" style="display:none">☆ 存为常去的地方</button>
+      <button class="link" id="favOpen" style="display:none">☆ Guardar como lugar frecuente</button>
       <div class="favadd" id="favAdd">
-        <input type="text" id="favName" placeholder="名字，例如：家、学校" maxlength="20">
-        <button class="btn" id="favSave">保存</button>
+        <input type="text" id="favName" placeholder="Nombre, por ejemplo: casa, trabajo" maxlength="20">
+        <button class="btn" id="favSave">Guardar</button>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <label class="t">油品</label>
+    <label class="t">Combustible</label>
     <div class="seg" id="fuelSeg">
       <button data-f="ga" class="on">Diésel normal</button>
       <button data-f="gp">Diésel premium</button>
     </div>
     <div class="gap"></div>
-    <label class="t">现在剩多少油</label>
+    <label class="t">Combustible que queda</label>
     <input type="range" id="fuelPct" min="0" max="100" step="1" value="25">
-    <div class="fuelinfo"><span>剩 <b id="pctTxt"></b></span><span>需要加 <b id="litTxt"></b></span></div>
+    <div class="fuelinfo"><span>Quedan <b id="pctTxt"></b></span><span>Hay que echar <b id="litTxt"></b></span></div>
     <div class="note" id="carInfo"></div>
     <div class="gap"></div>
     <details>
-      <summary>更多设置</summary>
+      <summary>Más ajustes</summary>
       <div class="grid3">
-        <div><label>油箱 (升)</label><input type="number" id="tank" min="20" max="120" step="1" inputmode="decimal"></div>
-        <div><label>油耗 (L/100km)</label><input type="number" id="cons" min="2" max="20" step="0.1" inputmode="decimal"></div>
-        <div><label>附近范围 (公里)</label><input type="number" id="radius" min="5" max="80" step="5" inputmode="numeric"></div>
+        <div><label>Depósito (L)</label><input type="number" id="tank" min="20" max="120" step="1" inputmode="decimal"></div>
+        <div><label>Consumo (L/100 km)</label><input type="number" id="cons" min="2" max="20" step="0.1" inputmode="decimal"></div>
+        <div><label>Radio cercano (km)</label><input type="number" id="radius" min="5" max="80" step="5" inputmode="numeric"></div>
       </div>
-      <div class="note">"附近范围"只用于不设目的地时：在这个距离内找加油站。</div>
+      <div class="note">El «radio cercano» solo se usa sin destino: busca gasolineras a esa distancia. También lo usa el modo coche (aviso de combustible del Copiloto de voz).</div>
       <div class="gap"></div>
-      <label class="t">车辆地址（Tailscale，选填）</label>
+      <label class="t">Dirección del coche (Tailscale, opcional)</label>
       <div class="row"><input type="text" id="carUrl" placeholder="http://100.65.114.20:8473" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <button class="btn" id="carBtn">读取</button></div>
-      <div class="note">填车机的 Tailscale 地址，点"读取"：页面会跳到车机，读完油量和油耗再跳回来（手机需要开着 Tailscale，车机需要通电联网）。</div>
+        <button class="btn" id="carBtn">Leer</button></div>
+      <div class="note">Escriba la dirección Tailscale del iDrive y pulse «Leer»: la página salta al coche, lee el combustible y el consumo, y vuelve (el móvil necesita Tailscale activo y el coche, estar encendido y con internet).</div>
     </details>
   </div>
 
-  <button class="primary" id="goBtn">查找顺路的 Shell 加油站</button>
+  <button class="primary" id="goBtn">Buscar Shell de camino</button>
   <div class="gap"></div>
   <div id="out"></div>
 
   <div class="foot">
-    油价：西班牙工业部 Geoportal de Gasolineras（官方牌价，不含 ClubSmart 折扣）。<br>
-    地址搜索 © OpenStreetMap（Nominatim），路线 © OSRM。
+    Precios: Geoportal de Gasolineras del Ministerio de Industria (precios oficiales, sin el descuento ClubSmart).<br>
+    Búsqueda de direcciones © OpenStreetMap (Nominatim), rutas © OSRM.
   </div>
 </main>
 
@@ -342,7 +350,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   function paintMode() {
     document.querySelectorAll('#modeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.m === st.mode));
     $('destBox').style.display = st.mode === 'dest' ? '' : 'none';
-    $('goBtn').textContent = st.mode === 'dest' ? '查找顺路的 Shell 加油站' : '查找附近最划算的 Shell 加油站';
+    $('goBtn').textContent = st.mode === 'dest' ? 'Buscar Shell de camino' : 'Buscar la Shell cercana más conveniente';
   }
   document.querySelectorAll('#modeSeg button').forEach((b) => b.addEventListener('click', () => {
     st.mode = b.dataset.m; st.last = null; $('out').innerHTML = ''; paintMode(); save();
@@ -355,18 +363,18 @@ if (typeof module !== 'undefined') module.exports = CORE;
       const on = st.to && Math.abs(st.to.lat - f.lat) < 1e-6 && Math.abs(st.to.lon - f.lon) < 1e-6;
       const c = document.createElement('span');
       c.className = 'chip' + (on ? ' on' : '');
-      c.innerHTML = '<button>' + esc(f.name) + '</button><button class="x" aria-label="删除">✕</button>';
+      c.innerHTML = '<button>' + esc(f.name) + '</button><button class="x" aria-label="Borrar">✕</button>';
       c.firstChild.addEventListener('click', () => {
         st.to = { lat: f.lat, lon: f.lon, label: f.name };
         $('toQ').value = f.name; $('toOpts').innerHTML = ''; showPicked('to'); save(); paintFavs();
       });
       c.lastChild.addEventListener('click', () => {
-        if (c.dataset.sure !== '1') { c.dataset.sure = '1'; c.lastChild.textContent = '删除?'; setTimeout(() => { c.dataset.sure = ''; c.lastChild.textContent = '✕'; }, 2500); return; }
+        if (c.dataset.sure !== '1') { c.dataset.sure = '1'; c.lastChild.textContent = '¿Borrar?'; setTimeout(() => { c.dataset.sure = ''; c.lastChild.textContent = '✕'; }, 2500); return; }
         st.favs.splice(i, 1); save(); paintFavs();
       });
       box.appendChild(c);
     });
-    if (!st.favs.length) box.innerHTML = '<span class="note">常去的地方（家、学校…）：先搜索并选好目的地，再点"☆ 存为常去的地方"。</span>';
+    if (!st.favs.length) box.innerHTML = '<span class="note">Lugares frecuentes (casa, trabajo…): busque y elija un destino, y pulse «☆ Guardar como lugar frecuente».</span>';
     const isFav = st.to && st.favs.some((f) => Math.abs(st.to.lat - f.lat) < 1e-6 && Math.abs(st.to.lon - f.lon) < 1e-6);
     $('favOpen').style.display = st.to && !isFav ? '' : 'none';
     if (!st.to || isFav) $('favAdd').classList.remove('show');
@@ -386,8 +394,8 @@ if (typeof module !== 'undefined') module.exports = CORE;
   function paintFuel() {
     document.querySelectorAll('#fuelSeg button').forEach((b) => b.classList.toggle('on', b.dataset.f === st.fuel));
     const o = readOpts(), lit = Math.max(0, o.tank * (1 - o.pct / 100));
-    $('pctTxt').textContent = o.pct + ' %（约 ' + (o.tank * o.pct / 100).toFixed(0) + ' 升）';
-    $('litTxt').textContent = lit.toFixed(0) + ' 升';
+    $('pctTxt').textContent = o.pct + ' % (unos ' + (o.tank * o.pct / 100).toFixed(0) + ' L)';
+    $('litTxt').textContent = lit.toFixed(0) + ' L';
   }
   document.querySelectorAll('#fuelSeg button').forEach((b) => b.addEventListener('click', () => {
     st.fuel = b.dataset.f; paintFuel(); save(); if (st.last) render();
@@ -404,13 +412,13 @@ if (typeof module !== 'undefined') module.exports = CORE;
   /** A reading on the page: litres, l/100km, when the car had it, the car's clock then (ms). */
   function applyCar(d, how) {
     const info = $('carInfo');
-    if (d.litres == null) { info.innerHTML = '🚗 车机连上了，但还没收到油量（车刚启动时等几秒再点"读取"）'; return; }
+    if (d.litres == null) { info.innerHTML = '🚗 Conectado con el coche, pero aún sin dato de combustible (recién arrancado: espere unos segundos y pulse «Leer»)'; return; }
     const o = readOpts();
     $('fuelPct').value = Math.max(0, Math.min(100, Math.round(d.litres / o.tank * 100)));
     if (d.l100km > 0) $('cons').value = d.l100km;
     const ago = d.at && d.now ? Math.max(0, Math.round((d.now - d.at) / 60000)) : null;
-    info.innerHTML = '🚗 来自车辆：剩 <b>' + d.litres + ' 升</b>' + (d.l100km > 0 ? ' · 油耗 <b>' + d.l100km + '</b> L/100km' : '') +
-      (ago != null ? ' · ' + (ago < 1 ? '刚刚' : ago + ' 分钟前') : '') + (how ? ' · ' + how : '');
+    info.innerHTML = '🚗 Del coche: quedan <b>' + d.litres + ' L</b>' + (d.l100km > 0 ? ' · consumo <b>' + d.l100km + '</b> L/100 km' : '') +
+      (ago != null ? ' · ' + (ago < 1 ? 'ahora mismo' : 'hace ' + ago + ' min') : '') + (how ? ' · ' + how : '');
     paintFuel(); save(); if (st.last) render();
   }
   async function readCar(quiet) {
@@ -419,11 +427,11 @@ if (typeof module !== 'undefined') module.exports = CORE;
     if (/^http:\/\//.test(base)) {
       // plain http (no "tailscale serve"): an https page can't fetch it, so go there and come back with the reading
       if (quiet) return;
-      info.textContent = '🚗 正在跳到车机读取…';
+      info.textContent = '🚗 Saltando al coche para leerlo…';
       location.href = base + '/go?to=' + encodeURIComponent(location.href.split('#')[0]);
       return;
     }
-    if (!quiet) info.textContent = '🚗 正在读取车辆数据…';
+    if (!quiet) info.textContent = '🚗 Leyendo los datos del coche…';
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = setTimeout(() => ctl && ctl.abort(), 5000);
     try {
@@ -431,7 +439,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
       if (!r.ok) throw new Error('HTTP ' + r.status);
       applyCar(await r.json());
     } catch (e) {
-      info.innerHTML = '🚗 连不上车辆（车机没通电联网，或手机没开 Tailscale），先用手动数值';
+      info.innerHTML = '🚗 No se puede conectar con el coche (apagado o sin internet, o Tailscale desactivado en el móvil): use los valores a mano';
     } finally { clearTimeout(timer); }
   }
   /** Back from the car (Fuel Link's /go): #car=<litres>,<l100km>,<at>,<now>; kept, and the hash taken off the address. */
@@ -450,8 +458,8 @@ if (typeof module !== 'undefined') module.exports = CORE;
     try { d = JSON.parse(localStorage.getItem('shellDieselCar') || 'null'); } catch (e) { d = null; }
     if (d && d.litres != null && /^http:\/\//.test(carBase())) {
       const age = Math.round((Date.now() - d.got) / 60000);
-      applyCar({ litres: d.litres, l100km: d.l100km, at: d.at, now: d.now + (Date.now() - d.got) }, '点"读取"更新');
-      if (age > 30) $('carInfo').innerHTML += ' <span class="err">（' + (age < 120 ? age + ' 分钟' : Math.round(age / 60) + ' 小时') + '前读的）</span>';
+      applyCar({ litres: d.litres, l100km: d.l100km, at: d.at, now: d.now + (Date.now() - d.got) }, 'pulse «Leer» para actualizar');
+      if (age > 30) $('carInfo').innerHTML += ' <span class="err">(leído hace ' + (age < 120 ? age + ' min' : Math.round(age / 60) + ' h') + ')</span>';
       return true;
     }
     return false;
@@ -460,15 +468,18 @@ if (typeof module !== 'undefined') module.exports = CORE;
   $('carUrl').addEventListener('change', save);
 
   // ---- the prices ----
+  let dataReady = null;
+  const dataP = new Promise((res) => { dataReady = res; });
   fetch('data/shell.json', { cache: 'no-cache' }).then((r) => {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }).then((d) => {
     st.data = d;
+    dataReady();
     const age = (Date.now() / 1000 - (d.updated || 0)) / 3600;
-    $('dataInfo').innerHTML = '油价时间：' + esc(d.fecha || '?') + ' · ' + d.stations.length + ' 个 Shell 站（不含 Express）' +
-      (age > 6 ? ' <span class="err">· 数据已 ' + Math.round(age) + ' 小时未更新</span>' : '');
-  }).catch((e) => { $('dataInfo').innerHTML = '<span class="err">读不到油价数据（' + esc(e.message) + '）</span>'; });
+    $('dataInfo').innerHTML = 'Precios del ' + esc(d.fecha || '?') + ' · ' + d.stations.length + ' gasolineras Shell (sin Express)' +
+      (age > 6 ? ' <span class="err">· sin actualizar desde hace ' + Math.round(age) + ' h</span>' : '');
+  }).catch((e) => { $('dataInfo').innerHTML = '<span class="err">No se pueden leer los precios (' + esc(e.message) + ')</span>'; });
 
   // ---- places ----
   function showPicked(which) {
@@ -480,13 +491,13 @@ if (typeof module !== 'undefined') module.exports = CORE;
     const q = $(which + 'Q').value.trim();
     const box = $(which + 'Opts');
     if (!q) return;
-    box.innerHTML = '<div class="msg">搜索中…</div>';
+    box.innerHTML = '<div class="msg">Buscando…</div>';
     try {
       const u = NOMINATIM + '?format=jsonv2&limit=5&countrycodes=es&accept-language=es&q=' + encodeURIComponent(q);
       const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const list = await r.json();
-      if (!list.length) { box.innerHTML = '<div class="msg">没找到，换个写法试试（可以加上城市名）</div>'; return; }
+      if (!list.length) { box.innerHTML = '<div class="msg">No se encontró: pruebe a escribirlo de otra forma (añada la ciudad)</div>'; return; }
       box.innerHTML = '';
       list.forEach((x) => {
         const b = document.createElement('button');
@@ -497,7 +508,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
         });
         box.appendChild(b);
       });
-    } catch (e) { box.innerHTML = '<div class="msg err">搜索失败：' + esc(e.message) + '</div>'; }
+    } catch (e) { box.innerHTML = '<div class="msg err">Error al buscar: ' + esc(e.message) + '</div>'; }
   }
   $('toBtn').addEventListener('click', () => search('to'));
   $('toQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search('to'); } });
@@ -507,15 +518,15 @@ if (typeof module !== 'undefined') module.exports = CORE;
 
   function locate() {
     return new Promise((ok, no) => {
-      if (!navigator.geolocation) return no(new Error('这个浏览器不能定位'));
+      if (!navigator.geolocation) return no(new Error('Este navegador no puede ubicarle'));
       navigator.geolocation.getCurrentPosition(
-        (p) => ok({ lat: p.coords.latitude, lon: p.coords.longitude, label: '当前位置' }),
-        (e) => no(new Error(e.code === 1 ? '没有定位权限，请在设置里允许 Safari 定位，或手动输入出发地' : '定位失败，请手动输入出发地')),
+        (p) => ok({ lat: p.coords.latitude, lon: p.coords.longitude, label: 'Ubicación actual' }),
+        (e) => no(new Error(e.code === 1 ? 'Sin permiso de ubicación: permítalo para Safari en Ajustes, o escriba la salida' : 'No se pudo ubicar: escriba la salida')),
         { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 });
     });
   }
   $('hereBtn').addEventListener('click', async () => {
-    $('fromPicked').textContent = '定位中…';
+    $('fromPicked').textContent = 'Ubicando…';
     try { st.from = await locate(); $('fromQ').value = ''; showPicked('from'); }
     catch (e) { $('fromPicked').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
   });
@@ -525,7 +536,7 @@ if (typeof module !== 'undefined') module.exports = CORE;
   async function osrm(path) {
     const r = await fetch(OSRM + path);
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.code !== 'Ok') throw new Error('路线服务出错（' + (j.message || j.code || ('HTTP ' + r.status)) + '）');
+    if (!r.ok || j.code !== 'Ok') throw new Error('Error del servicio de rutas (' + (j.message || j.code || ('HTTP ' + r.status)) + ')');
     return j;
   }
   /** The cheapest stations of each fuel type among list, each once, so switching the type needs no new request. */
@@ -538,39 +549,39 @@ if (typeof module !== 'undefined') module.exports = CORE;
   }
   async function go() {
     const out = $('out');
-    if (!st.data) { out.innerHTML = '<div class="msg err">油价数据还没读到</div>'; return; }
+    if (!st.data) { out.innerHTML = '<div class="msg err">Todavía no se han leído los precios</div>'; return; }
     const withDest = st.mode === 'dest';
     if (withDest && !st.to) {
-      if ($('toQ').value.trim()) { await search('to'); out.innerHTML = '<div class="msg">请先在上面的结果里点选目的地</div>'; }
-      else out.innerHTML = '<div class="msg err">请输入目的地，或选"不设目的地"</div>';
+      if ($('toQ').value.trim()) { await search('to'); out.innerHTML = '<div class="msg">Elija primero el destino en los resultados de arriba</div>'; }
+      else out.innerHTML = '<div class="msg err">Escriba un destino, o elija «Sin destino»</div>';
       return;
     }
     $('goBtn').disabled = true;
     try {
       if (!st.from) {
-        if ($('fromQ').value.trim()) { await search('from'); out.innerHTML = '<div class="msg">请先在上面的结果里点选出发地</div>'; return; }
-        out.innerHTML = '<div class="msg">正在定位…</div>';
+        if ($('fromQ').value.trim()) { await search('from'); out.innerHTML = '<div class="msg">Elija primero la salida en los resultados de arriba</div>'; return; }
+        out.innerHTML = '<div class="msg">Ubicando…</div>';
         st.from = await locate(); showPicked('from');
       }
       const A = st.from, o = readOpts();
       if (withDest) {
-        out.innerHTML = '<div class="msg">计算路线…</div>';
+        out.innerHTML = '<div class="msg">Calculando la ruta…</div>';
         const B = st.to;
         const route = (await osrm('/route/v1/driving/' + A.lon + ',' + A.lat + ';' + B.lon + ',' + B.lat + '?overview=full&geometries=geojson')).routes[0];
         const line = route.geometry.coordinates;
         const cands = pickCands(CORE.nearRoute(st.data.stations, line, 'ga', CORRIDOR_KM, 1e9)
           .concat(CORE.nearRoute(st.data.stations, line, 'gp', CORRIDOR_KM, 1e9)), 45);
-        if (!cands.length) { st.last = null; out.innerHTML = '<div class="msg">路线 ' + CORRIDOR_KM + ' 公里内没有 Shell 加油站</div>'; return; }
-        out.innerHTML = '<div class="msg">计算每个加油站要绕多少路…</div>';
+        if (!cands.length) { st.last = null; out.innerHTML = '<div class="msg">No hay gasolineras Shell a menos de ' + CORRIDOR_KM + ' km de la ruta</div>'; return; }
+        out.innerHTML = '<div class="msg">Calculando el desvío de cada gasolinera…</div>';
         const pts = [A, B].concat(cands).map((p) => p.lon + ',' + p.lat).join(';');
         const idx = cands.map((_, i) => i + 2).join(';');
         const t = await osrm('/table/v1/driving/' + pts + '?sources=0;' + idx + '&destinations=1;' + idx + '&annotations=duration,distance');
         st.last = { withDest, route, cands, table: { durations: t.durations, distances: t.distances }, to: B };
       } else {
-        out.innerHTML = '<div class="msg">计算到每个加油站的路线…</div>';
+        out.innerHTML = '<div class="msg">Calculando la ruta a cada gasolinera…</div>';
         const cands = pickCands(CORE.nearPoint(st.data.stations, A, 'ga', o.radius, 1e9)
           .concat(CORE.nearPoint(st.data.stations, A, 'gp', o.radius, 1e9)), 45);
-        if (!cands.length) { st.last = null; out.innerHTML = '<div class="msg">' + o.radius + ' 公里内没有 Shell 加油站，试试在"更多设置"里把"附近范围"调大</div>'; return; }
+        if (!cands.length) { st.last = null; out.innerHTML = '<div class="msg">No hay gasolineras Shell a menos de ' + o.radius + ' km: amplíe el «radio cercano» en «Más ajustes»</div>'; return; }
         const pts = [A].concat(cands).map((p) => p.lon + ',' + p.lat).join(';');
         const t = await osrm('/table/v1/driving/' + pts + '?sources=0&annotations=duration,distance');
         st.last = { withDest, route: null, cands, table: { durations: t.durations, distances: t.distances }, to: null };
@@ -594,52 +605,52 @@ if (typeof module !== 'undefined') module.exports = CORE;
     if (!s._hours) s._hours = CORE.parseHours(s.h) || 'none';
     const iv = s._hours === 'none' ? null : s._hours;
     const n = localNow(s, new Date()), now = CORE.hoursAt(iv, n.wd, n.min);
-    if (!now) return { cls: 'unk', text: '⚪ 营业状态未知', rank: 1 };
-    if (now.always) return { cls: 'ok', text: '🟢 24 小时营业', rank: 0 };
+    if (!now) return { cls: 'unk', text: '⚪ Horario desconocido', rank: 1 };
+    if (now.always) return { cls: 'ok', text: '🟢 Abierta 24 horas', rank: 0 };
     const arrive = Math.round(arriveS / 60);
     if (now.open) {
-      if (now.mins <= arrive) return { cls: 'no', text: '🔴 营业中，但你到之前就关门了（' + dur(now.mins) + '后关门，开过去要 ' + dur(arrive) + '）', rank: 2 };
-      if (now.mins - arrive < 30) return { cls: 'warn', text: '🟠 营业中 · ' + dur(now.mins) + '后关门（到站后只剩 ' + dur(now.mins - arrive) + '）', rank: 0 };
-      return { cls: 'ok', text: '🟢 营业中 · 还有 ' + dur(now.mins) + '关门', rank: 0 };
+      if (now.mins <= arrive) return { cls: 'no', text: '🔴 Abierta, pero cierra antes de que llegue (cierra en ' + dur(now.mins) + ', tarda ' + dur(arrive) + ' en llegar)', rank: 2 };
+      if (now.mins - arrive < 30) return { cls: 'warn', text: '🟠 Abierta · cierra en ' + dur(now.mins) + ' (al llegar quedarán ' + dur(now.mins - arrive) + ')', rank: 0 };
+      return { cls: 'ok', text: '🟢 Abierta · cierra en ' + dur(now.mins), rank: 0 };
     }
-    if (now.mins === Infinity) return { cls: 'no', text: '🔴 已关门', rank: 2 };
-    if (now.mins <= arrive) return { cls: 'warn', text: '🟠 现在关着，' + dur(now.mins) + '后开门，你到的时候已经开了', rank: 0 };
-    return { cls: 'no', text: '🔴 已关门 · ' + dur(now.mins) + '后开门', rank: 2 };
+    if (now.mins === Infinity) return { cls: 'no', text: '🔴 Cerrada', rank: 2 };
+    if (now.mins <= arrive) return { cls: 'warn', text: '🟠 Ahora cerrada: abre en ' + dur(now.mins) + ', cuando llegue ya estará abierta', rank: 0 };
+    return { cls: 'no', text: '🔴 Cerrada · abre en ' + dur(now.mins), rank: 2 };
   }
-  const dur = (m) => m < 60 ? m + ' 分钟' : Math.floor(m / 60) + ' 小时' + (m % 60 ? ' ' + (m % 60) + ' 分' : '');
+  const dur = (m) => m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '');
   function render() {
     const L = st.last, o = readOpts(), fuel = st.fuel;
     const res = CORE.rank(L.cands, L.table, fuel, o);
     const fname = fuel === 'gp' ? 'Diésel premium' : 'Diésel normal';
     const head = L.withDest
-      ? '<div class="route">直达目的地：' + (L.route.distance / 1000).toFixed(1) + ' 公里 · ' + mins(L.route.duration) + ' · ' + fname + ' · 加 ' + res.litres.toFixed(0) + ' 升</div>'
-      : '<div class="route">从当前位置出发，' + o.radius + ' 公里内 · ' + fname + ' · 加 ' + res.litres.toFixed(0) + ' 升</div>';
+      ? '<div class="route">Directo al destino: ' + dec(L.route.distance / 1000, 1) + ' km · ' + mins(L.route.duration) + ' · ' + fname + ' · echar ' + res.litres.toFixed(0) + ' L</div>'
+      : '<div class="route">Desde su ubicación, a menos de ' + o.radius + ' km · ' + fname + ' · echar ' + res.litres.toFixed(0) + ' L</div>';
     const out = $('out');
-    if (!res.rows.length) { out.innerHTML = head + '<div class="msg">没有找到有 ' + fname + ' 的 Shell 站</div>'; return; }
+    if (!res.rows.length) { out.innerHTML = head + '<div class="msg">No hay gasolineras Shell con ' + fname + '</div>'; return; }
     res.rows.forEach((r) => { r.open = openState(r.s, r.toS); });
     const rows = res.rows.slice().sort((a, b) => a.open.rank - b.open.rank || a.total - b.total).slice(0, 10);
     const best = rows[0].total;
     out.innerHTML = head + rows.map((r, i) => {
       const s = r.s, addr = CORE.fullAddress(s);
-      const more = i ? '<div class="save">比第 1 名多花 ' + eur(r.total - best) + '</div>' : '';
+      const more = i ? '<div class="save">' + eur(r.total - best) + ' más que la n.º 1</div>' : '';
       const facts = L.withDest
-        ? fact('绕路', '+' + mins(r.detS) + ' · +' + (r.detM / 1000).toFixed(1) + ' 公里') + fact('加满', eur(r.fill)) + fact('绕路油费', eur(r.driveCost))
-        : fact('开过去', mins(r.toS) + ' · ' + (r.toSm / 1000).toFixed(1) + ' 公里') + fact('加满', eur(r.fill)) + fact('路上油费', eur(r.driveCost));
+        ? fact('Desvío', '+' + mins(r.detS) + ' · +' + dec(r.detM / 1000, 1) + ' km') + fact('Llenar', eur(r.fill)) + fact('Gasto del desvío', eur(r.driveCost))
+        : fact('Llegar', mins(r.toS) + ' · ' + dec(r.toSm / 1000, 1) + ' km') + fact('Llenar', eur(r.fill)) + fact('Gasto del trayecto', eur(r.driveCost));
       const nav = L.withDest
-        ? '<div class="acts"><button class="copy" data-addr="' + esc(addr) + '">复制地址</button>' +
-          '<a class="waze" href="' + waze(s) + '" target="_blank" rel="noopener">① Waze 去加油站</a></div>' +
-          '<div class="acts2"><a class="waze2" href="' + waze(L.to) + '" target="_blank" rel="noopener">② 加完油：Waze 去目的地</a></div>'
-        : '<div class="acts"><button class="copy" data-addr="' + esc(addr) + '">复制地址</button>' +
-          '<a class="waze" href="' + waze(s) + '" target="_blank" rel="noopener">Waze 导航过去</a></div>';
+        ? '<div class="acts"><button class="copy" data-addr="' + esc(addr) + '">Copiar dirección</button>' +
+          '<a class="waze" href="' + waze(s) + '" target="_blank" rel="noopener">① Waze a la gasolinera</a></div>' +
+          '<div class="acts2"><a class="waze2" href="' + waze(L.to) + '" target="_blank" rel="noopener">② Tras repostar: Waze al destino</a></div>'
+        : '<div class="acts"><button class="copy" data-addr="' + esc(addr) + '">Copiar dirección</button>' +
+          '<a class="waze" href="' + waze(s) + '" target="_blank" rel="noopener">Ir con Waze</a></div>';
       return '<div class="st' + (i ? '' : ' best') + (r.open.rank === 2 ? ' closed' : '') + '">' +
         '<div class="top"><div><span class="rank">' + (i + 1) + '</span><span class="name">' + esc(CORE.nice(s.n)) + ' · ' + esc(CORE.nice(s.mun || s.loc)) + '</span>' +
         '<div class="addr">' + esc(addr) + '</div>' + more + '</div>' +
-        '<div class="price"><div class="p">' + r.price.toFixed(3) + '</div><div class="u">€ / 升</div></div></div>' +
+        '<div class="price"><div class="p">' + dec(r.price, 3) + '</div><div class="u">€ / L</div></div></div>' +
         '<div class="facts">' + facts +
-        '<div class="fact total" style="grid-column: span 3"><div class="k">实际总花费（加满 + ' + (L.withDest ? '绕路' : '路上') + '油费）</div><div class="v">' + eur(r.total) + '</div></div>' +
+        '<div class="fact total" style="grid-column: span 3"><div class="k">Coste real total (llenar + ' + (L.withDest ? 'desvío' : 'trayecto') + ')</div><div class="v">' + eur(r.total) + '</div></div>' +
         '</div>' +
         '<div class="hours ' + r.open.cls + '">' + r.open.text + '</div>' + nav + '</div>';
-    }).join('') + (L.withDest ? '<div class="note" style="text-align:center">Waze 的链接只能设一个目的地，没法自动加中途站：先点 ①，加完油再点 ②。</div>' : '');
+    }).join('') + (L.withDest ? '<div class="note" style="text-align:center">Un enlace de Waze solo admite un destino, sin paradas: pulse ① y, tras repostar, ②.</div>' : '');
     out.querySelectorAll('.copy').forEach((b) => b.addEventListener('click', () => copy(b)));
   }
 
@@ -653,17 +664,67 @@ if (typeof module !== 'undefined') module.exports = CORE;
       try { ok = document.execCommand('copy'); } catch (x) { ok = false; }
       ta.remove();
     }
-    b.textContent = ok ? '已复制 ✓' : '复制失败，请长按地址';
+    b.textContent = ok ? 'Copiada ✓' : 'No se pudo copiar: mantenga pulsada la dirección';
     b.classList.toggle('done', ok);
-    setTimeout(() => { b.textContent = '复制地址'; b.classList.remove('done'); }, 2500);
+    setTimeout(() => { b.textContent = 'Copiar dirección'; b.classList.remove('done'); }, 2500);
   }
 
   const fact = (k, v) => '<div class="fact"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  const mins = (s) => { const m = Math.round(s / 60); return m < 60 ? m + ' 分钟' : Math.floor(m / 60) + ' 小时 ' + (m % 60) + ' 分'; };
+  const dec = (v, n) => v.toFixed(n).replace('.', ',');
+  const mins = (s) => { const m = Math.round(s / 60); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; };
   const eur = (v) => v.toFixed(2).replace('.', ',') + ' €';
   function esc(t) { return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
+  // ---- car mode: the Copiloto de voz's low fuel notice opens ?auto=1&km=<range>#car=<litres>,<l100km>,<at>,<now> ----
+  // It looks around the phone (the "radio cercano"), keeps the Shells open when you get there and at most half the
+  // range away by road, takes the cheapest of them (fill + the drive, as the list ranks them) and opens Waze to it.
+  // None that close and cheap: the nearest open one, so you get there. The list shows below, as without a destination.
+  const QS = new URLSearchParams(location.search);
+  const AUTO = QS.get('auto') === '1', AUTO_KM = parseFloat(QS.get('km'));
+  let autoCancelled = false;
+  async function autoGo() {
+    const box = $('autoBox');
+    box.style.display = '';
+    box.innerHTML = '<div class="k">Modo coche · combustible bajo</div><div class="best">Buscando la Shell más conveniente…</div>';
+    try {
+      await dataP;
+      st.from = await locate(); showPicked('from');
+      const A = st.from, o = readOpts();
+      const maxKm = AUTO_KM > 0 ? AUTO_KM / 2 : Infinity;
+      const cands = pickCands(CORE.nearPoint(st.data.stations, A, 'ga', o.radius, 1e9)
+        .concat(CORE.nearPoint(st.data.stations, A, 'gp', o.radius, 1e9)), 45);
+      if (!cands.length) throw new Error('No hay ninguna Shell a menos de ' + o.radius + ' km: amplíe el «radio cercano» en «Más ajustes»');
+      const pts = [A].concat(cands).map((p) => p.lon + ',' + p.lat).join(';');
+      const t = await osrm('/table/v1/driving/' + pts + '?sources=0&annotations=duration,distance');
+      st.last = { withDest: false, route: null, cands, table: { durations: t.durations, distances: t.distances }, to: null };
+      render();
+      const rows = CORE.rank(cands, st.last.table, st.fuel, o).rows;
+      rows.forEach((r) => { r.open = openState(r.s, r.toS); });
+      const open = rows.filter((r) => r.open.rank === 0);
+      const near = open.filter((r) => r.toSm / 1000 <= maxKm).sort((a, b) => a.total - b.total);
+      let pick = near[0], why = 'La más barata (llenar + trayecto) a menos de ' + (isFinite(maxKm) ? Math.round(maxKm) + ' km, la mitad de su autonomía' : o.radius + ' km');
+      if (!pick) {
+        pick = open.concat(rows.filter((r) => r.open.rank === 1)).sort((a, b) => a.toSm - b.toSm)[0];
+        why = 'Ninguna barata a menos de la mitad de su autonomía: la más cercana, para llegar seguro';
+      }
+      if (!pick) throw new Error('Ninguna Shell abierta cuando llegue a menos de ' + o.radius + ' km');
+      const s = pick.s;
+      box.innerHTML = '<div class="k">Modo coche · combustible bajo</div>' +
+        '<div class="best">' + esc(CORE.nice(s.n)) + ' · ' + esc(CORE.nice(s.mun || s.loc)) + '</div>' +
+        '<div class="why">' + dec(pick.price, 3) + ' €/L · ' + dec(pick.toSm / 1000, 1) + ' km · ' + mins(pick.toS) + ' · total ' + eur(pick.total) + '<br>' + esc(why) + '</div>' +
+        '<a class="go" id="autoWaze" href="' + waze(s) + '">Abrir Waze</a>' +
+        '<button class="cancel" id="autoCancel">No abrir Waze: ver la lista</button>';
+      $('autoCancel').addEventListener('click', () => { autoCancelled = true; $('autoCancel').textContent = 'Lista abajo'; });
+      // iOS opens an app from a page only through its own prompt: waze:// asks "¿Abrir en Waze?" (one tap); the button
+      // above (Waze's web link) does the same if the prompt is dismissed
+      setTimeout(() => { if (!autoCancelled) location.href = 'waze://?ll=' + s.lat + ',' + s.lon + '&navigate=yes'; }, 1200);
+    } catch (e) {
+      box.innerHTML = '<div class="k">Modo coche · combustible bajo</div><div class="msg err">' + esc(e.message) + '</div>';
+    }
+  }
+
   paintFuel(); paintMode(); showPicked('to'); if (!fromHash()) readCar(true);
+  if (AUTO) autoGo();
 })();
 </script>
 </body>
